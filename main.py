@@ -18,10 +18,7 @@ def convert_xml_to_peppol(xml, kbo_number):
     return xml
 
 
-xml = read_xml("odoo.xml")
-print(xml)
-print_xml_children(xml)
-print('********************************************************')
+xml = read_xml("UBL-Invoice-2.1 (11).xml")
 create_invoice_elementtree(xml, "0478693713")
 # Write the XML to a file
 write_xml("test.xml",xml)

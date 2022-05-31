@@ -18,6 +18,7 @@ def write_xml(file_path, data):
     """
     tree = ET.ElementTree(data)
     tree.write(file_path, xml_declaration=True, encoding="utf-8")
+    print("Wrote XML file to: " + file_path)
 
 
 def print_xml_children(element):

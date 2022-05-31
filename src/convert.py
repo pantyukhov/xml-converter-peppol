@@ -34,6 +34,7 @@ def create_invoice_elementtree(invoice, kbo_number):
     invoice = add_ns1_children(invoice)
     invoice = convert_supplier_party(invoice, kbo_number)
     invoice = convert_customer_party(invoice, kbo_number)
+    invoice = convert_delivery(invoice)
     invoice = convert_payment_means(invoice)
     invoice = convert_tax_total(invoice)
     invoice = convert_invoice_line(invoice)
@@ -98,7 +99,7 @@ def convert_payment_means(invoice):
     :param invoice:
     :return:
     """
-    payment_means = invoice.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PaymentMeans')
+    payment_means = find_child(invoice, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PaymentMeans')
     # Find payment means code child.
     payment_means_code = payment_means.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PaymentMeansCode')
     # Change listid of payment means code.
@@ -129,7 +130,7 @@ def convert_tax_total(invoice):
     :param invoice:
     :return:
     """
-    tax_total = invoice.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxTotal')
+    tax_total = find_child(invoice, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxTotal')
     # Find tax subtotal child.
     tax_subtotal = tax_total.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxSubtotal')
     # Remove percent child from tax_subtotal.
@@ -161,7 +162,7 @@ def convert_invoice_line(invoice):
     :return:
     """
     # Find invoice line.
-    invoice_line = invoice.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}InvoiceLine')
+    invoice_line = find_child(invoice, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}InvoiceLine')
     # Find item child.
     item = invoice_line.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Item')
     # Remove item child.
@@ -261,7 +262,6 @@ def change_document_currency_code(invoice):
     for child in invoice:
         if child.tag == '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}DocumentCurrencyCode':
             child.set('listID', "ISO4217")
-            print('here')
             break
     return invoice
 
@@ -301,10 +301,7 @@ def change_identification_code_list_id(xml):
     """
     # Find child with tag postaladdress.
     postallAdress = xml.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PostalAddress')
-    # Print children of postaladdress.
-    print('##############################')
-    for child in postallAdress:
-        print(child.tag)
+
     # Find child with tag identificationcode and change listid.
     identification_code = postallAdress.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}IdentificationCode')
     if identification_code is not None:
@@ -337,7 +334,11 @@ def electronic_mail_add_languageId(xml):
     :return: The elementtree.
     """
     # Find child with tag contact.
-    contact = xml.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Contact')
+    contact = None
+    for child in xml:
+        if(child.tag == '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Contact'):
+            contact = child
+            break
     # Find child with tag electronicmail and add languageId.
     electronic_mail = contact.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ElectronicMail')
     electronic_mail.set('languageID', "NL")
@@ -381,6 +382,7 @@ def add_party_legal_entity(xml, endpointId):
     """
     # Find partytaxscheme.
     partytaxscheme = xml.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyTaxScheme')
+    print(partytaxscheme)
     if(partytaxscheme is not None):
         # Find child with tag registrationname.
         registrationname = partytaxscheme.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}RegistrationName')
@@ -391,8 +393,8 @@ def add_party_legal_entity(xml, endpointId):
         # Add registrationname and companyid as childs.
         partylegalentity.append(registrationname)
         partylegalentity.append(companyid)
-        # Add partylegalentity as child to party.
-        partytaxscheme.append(xml)
+        # Add partylegalentity as one to last child to party.
+        xml.insert(len(xml)-1, partylegalentity)
     else:
         xml = add_party_legal_entity_with_endpointid(xml, endpointId)
     return xml
@@ -423,3 +425,40 @@ def add_party_legal_entity_with_endpointid(xml, endpointId):
     # Add partylegalentity as one to last child to party.
     xml.insert(len(xml.getchildren())-1, partylegalentity)
     return xml
+
+
+def convert_delivery(xml):
+    """
+    Convert delivery.
+    :param xml: The invoice xml in elementtree.
+    :return: The elementtree.
+    """
+    # Find delivery.
+    delivery = xml.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Delivery')
+    if delivery is None:
+        return xml
+    # Find delivery_location.
+    delivery_location = delivery.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}DeliveryLocation')
+    # Find country.
+    country = delivery_location.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Country')
+    # Find identification_code.
+    identification_code = delivery_location.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}IdentificationCode')
+    if identification_code is not None:
+        identification_code.set('listID', "ISO3166-1:Alpha2")
+
+    # Find delivery_party
+    delivery_party = delivery.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}DeliveryParty')
+    change_identification_code_list_id(delivery_party)
+    return xml
+
+
+def find_child(xml, tag):
+    """
+    Find child with tag.
+    :param xml: The invoice xml in elementtree.
+    :param tag: The tag.
+    :return: The child.
+    """
+    for child in xml.getchildren():
+        if(child.tag == tag):
+            return child
