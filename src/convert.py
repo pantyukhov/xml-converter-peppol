@@ -65,7 +65,7 @@ def convert_supplier_party(invoice, kbo_number):
     supplier_party = invoice.find('.//{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}AccountingSupplierParty')
     # Find party child.
     party = find_party(supplier_party)
-    party = add_endpoint_id(party, kbo_number)
+    party = add_endpoint_id(party, "0478693713")
     party = remove_website_uri(party)
     party = change_identification_code_list_id(party)
     party = remove_scheme_id_of_id(party)
