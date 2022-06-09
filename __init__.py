@@ -3,11 +3,11 @@ import xml.etree.ElementTree as ET
 import src.convert as convert
 
 # Create the application.
-APP = Flask(__name__)
+app = Flask(__name__)
 
 
 # Create a URL route in our application for "/"
-@APP.route('/')
+@app.route('/')
 def home():
     """
     The home page for our application.
@@ -19,7 +19,7 @@ def home():
     return render_template('home.html')
 
 
-@APP.route('/uploader', methods=['POST'])
+@app.route('/uploader', methods=['POST'])
 def upload_file():
     """
     Get multipart file from the form
@@ -43,4 +43,4 @@ def upload_file():
 
 # If we're running in stand alone mode, run the application
 if __name__ == '__main__':
-    APP.run(threaded=True, port=5000)
+    app.run()
